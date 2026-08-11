@@ -32,7 +32,7 @@ export function SessionCard({ session, onRescheduleClick }: SessionCardProps) {
   };
 
   return (
-    <Card className="flex flex-col justify-between overflow-hidden border border-orange-200/80 bg-gradient-to-br from-orange-50/90 via-amber-50/40 to-emerald-50/70 hover:border-emerald-400/80 hover:shadow-md transition-all">
+    <Card className="flex flex-col justify-between overflow-hidden border border-orange-200 bg-gradient-to-br from-orange-50 via-amber-50 to-emerald-50 hover:border-emerald-400 hover:shadow-md transition-all">
       <div>
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <span className="text-xs font-bold uppercase tracking-wider text-orange-900 bg-orange-100/90 px-3 py-1 rounded-md border border-orange-200 shadow-xs">
