@@ -2,9 +2,10 @@
 
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Calendar, AlertCircle, RefreshCw } from "lucide-react";
+import { Calendar, AlertCircle, RefreshCw, Globe, ArrowRightLeft } from "lucide-react";
 import type { TutoringSession } from "@/types/session";
 import { saveSessionsToStorage } from "@/lib/storage/session-storage";
+import { getUserTimezone } from "@/lib/time/timezone";
 import { SessionCard } from "./session-card";
 import { RescheduleDialog } from "./reschedule-dialog";
 import { RescheduleHistory } from "./reschedule-history";
@@ -34,6 +35,9 @@ async function fetchUpcomingSessions(): Promise<TutoringSession[]> {
 export function UpcomingSessions() {
   const [selectedSession, setSelectedSession] = useState<TutoringSession | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showTimezoneExplanation, setShowTimezoneExplanation] = useState<boolean>(false);
+
+  const userTimezone = getUserTimezone();
 
   const {
     data: sessions,
@@ -69,16 +73,60 @@ export function UpcomingSessions() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={handleRefresh}
-          disabled={isFetching}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white text-xs font-medium text-slate-700 border border-slate-200 hover:bg-orange-50 hover:text-orange-900 hover:border-orange-300 disabled:opacity-50 transition-all shadow-xs self-start sm:self-auto cursor-pointer"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin text-orange-600" : ""}`} />
-          <span>{isFetching ? "Refreshing..." : "Refresh Data"}</span>
-        </button>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={() => setShowTimezoneExplanation(!showTimezoneExplanation)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-orange-50 text-xs font-semibold text-orange-800 border border-orange-200 hover:bg-orange-100 transition-all cursor-pointer"
+          >
+            <Globe className="h-3.5 w-3.5 text-orange-600" />
+            <span>Timezone Info</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={isFetching}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white text-xs font-medium text-slate-700 border border-slate-200 hover:bg-slate-50 disabled:opacity-50 transition-all shadow-xs cursor-pointer"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin text-orange-600" : ""}`} />
+            <span>{isFetching ? "Refreshing..." : "Refresh Data"}</span>
+          </button>
+        </div>
       </div>
+
+      {/* Timezone Explanation Visual Banner */}
+      {showTimezoneExplanation && (
+        <div className="rounded-xl border border-orange-200 bg-gradient-to-r from-orange-50/90 via-amber-50/50 to-white p-5 space-y-3 shadow-xs animate-in fade-in">
+          <div className="flex items-center gap-2 font-bold text-orange-950 text-sm">
+            <ArrowRightLeft className="h-4 w-4 text-orange-600" />
+            How Timezone Conversion Works in Debe Learning
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+            <div className="rounded-lg border border-orange-200/80 bg-white p-3 space-y-1">
+              <p className="font-bold text-orange-900">1. Stored in Universal UTC</p>
+              <p className="text-slate-600 text-[11px] leading-relaxed">
+                All session dates are saved on server in UTC ISO format: <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-800">2026-08-13T13:00:00.000Z</code>.
+              </p>
+            </div>
+
+            <div className="rounded-lg border border-orange-200/80 bg-white p-3 space-y-1">
+              <p className="font-bold text-orange-900">2. Auto Local Browser Display</p>
+              <p className="text-slate-600 text-[11px] leading-relaxed">
+                Browser detects your timezone (<strong>{userTimezone}</strong>) and uses native <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-800">Intl.DateTimeFormat</code> to render local time.
+              </p>
+            </div>
+
+            <div className="rounded-lg border border-orange-200/80 bg-white p-3 space-y-1">
+              <p className="font-bold text-orange-900">3. Safe Reschedule Submits</p>
+              <p className="text-slate-600 text-[11px] leading-relaxed">
+                When picking a new slot, the local selection converts back to UTC before sending to server: <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-800">date.toISOString()</code>.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Loading Skeleton */}
       {isLoading && (

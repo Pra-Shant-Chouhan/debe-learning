@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Clock, Calendar as CalendarIcon, Globe, AlertCircle, CheckCircle2, ShieldAlert, Info, HelpCircle } from "lucide-react";
 import type { TutoringSession, TeacherAvailability, RescheduleReason, TeacherSlot } from "@/types/session";
 import { getSlotState, MIN_LEAD_TIME_MS } from "@/lib/slots/generate-slots";
@@ -27,7 +28,11 @@ async function fetchTeacherSlots(teacherId: string): Promise<TeacherAvailability
   return res.json();
 }
 
-export function RescheduleDialog({ session, open, onOpenChange }: RescheduleDialogProps) {
+export function RescheduleDialog({
+  session,
+  open,
+  onOpenChange,
+}: RescheduleDialogProps) {
   const userTimezone = getUserTimezone();
   const mutation = useRescheduleSession();
 
@@ -36,6 +41,7 @@ export function RescheduleDialog({ session, open, onOpenChange }: RescheduleDial
   const [selectedDateKey, setSelectedDateKey] = useState<string>("");
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showLeadTimeInfo, setShowLeadTimeInfo] = useState<boolean>(false);
+  const [showTimezoneGuide, setShowTimezoneGuide] = useState<boolean>(false);
 
   // Fetch teacher slot availability
   const {
@@ -83,6 +89,7 @@ export function RescheduleDialog({ session, open, onOpenChange }: RescheduleDial
       setReason("Conflict");
       setSubmitError(null);
       setShowLeadTimeInfo(false);
+      setShowTimezoneGuide(false);
     }
   }, [open]);
 
@@ -130,11 +137,22 @@ export function RescheduleDialog({ session, open, onOpenChange }: RescheduleDial
         status: "pending_approval",
       });
 
-      // Close modal on success
+      // Close modal immediately
       onOpenChange(false);
+
+      // Trigger Sonner Toast notification sooner
+      const formattedLocal = formatParentLocalTime(selectedSlotUtc);
+      toast.success("Reschedule Request Submitted!", {
+        description: `Subject: ${session.subject} | Requested Slot: ${formattedLocal} (${userTimezone})`,
+        duration: 5000,
+      });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to reschedule session.";
       setSubmitError(errorMessage);
+      toast.error("Reschedule Request Failed", {
+        description: errorMessage,
+        duration: 6000,
+      });
     }
   };
 
@@ -150,7 +168,7 @@ export function RescheduleDialog({ session, open, onOpenChange }: RescheduleDial
         </div>
         <DialogTitle className="mt-1">Request Session Reschedule</DialogTitle>
         <DialogDescription>
-          Select a new date & time slot. All requests are saved locally and synced with Debe&apos;s portal.
+          Select a new date & time slot. Upon submission, the modal closes immediately and fires a Sonner toast notification.
         </DialogDescription>
       </DialogHeader>
 
@@ -307,13 +325,23 @@ export function RescheduleDialog({ session, open, onOpenChange }: RescheduleDial
           </Select>
         </div>
 
-        {/* Explicit Timezone Reason Banner */}
+        {/* Explicit Timezone Conversion Breakdown */}
         {selectedSlotUtc && (
           <div className="rounded-lg border border-emerald-200 bg-emerald-50/90 p-3.5 space-y-2 text-xs text-emerald-950 animate-in fade-in">
-            <div className="flex items-center gap-1.5 font-bold text-emerald-900">
-              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-              Timezone Conversion & Persisted UTC Confirmation
+            <div className="flex items-center justify-between font-bold text-emerald-900">
+              <span className="flex items-center gap-1.5">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                Timezone Conversion Live Confirmation
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowTimezoneGuide(!showTimezoneGuide)}
+                className="text-[11px] font-medium text-emerald-700 underline cursor-pointer"
+              >
+                {showTimezoneGuide ? "Hide logic" : "How conversion works?"}
+              </button>
             </div>
+
             <div className="space-y-1 pl-5 text-emerald-800">
               <p>
                 <span className="font-semibold">Parent Local Time:</span>{" "}
@@ -321,12 +349,24 @@ export function RescheduleDialog({ session, open, onOpenChange }: RescheduleDial
               </p>
               <p className="flex items-center gap-1 text-[11px]">
                 <Globe className="h-3 w-3 text-emerald-700 shrink-0" />
-                <span className="font-semibold">Stored on server as UTC:</span>{" "}
-                <code className="bg-white px-1.5 py-0.5 rounded border border-emerald-300 font-mono text-emerald-950">
+                <span className="font-semibold">Converted & Stored in UTC:</span>{" "}
+                <code className="bg-white px-1.5 py-0.5 rounded border border-emerald-300 font-mono text-emerald-950 font-bold">
                   {selectedSlotUtc}
                 </code>
               </p>
             </div>
+
+            {showTimezoneGuide && (
+              <div className="mt-2 border-t border-emerald-200 pt-2 text-[11px] text-emerald-950 space-y-1 animate-in fade-in">
+                <p className="font-semibold">How Timezone Conversion Operates:</p>
+                <ol className="list-decimal pl-4 space-y-0.5 text-slate-700">
+                  <li><strong>Browser Local Pick</strong>: You select a local time in {userTimezone}.</li>
+                  <li><strong>UTC ISO Conversion</strong>: JavaScript converts local date milliseconds to universal UTC string: <code>new Date().toISOString()</code>.</li>
+                  <li><strong>Server & DB Persistence</strong>: Backend stores UTC string safely without local clock bias.</li>
+                  <li><strong>Universal Display</strong>: On load, <code>Intl.DateTimeFormat</code> automatically transforms UTC back to any user&apos;s local timezone.</li>
+                </ol>
+              </div>
+            )}
           </div>
         )}
 
