@@ -4,15 +4,30 @@ import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Calendar, AlertCircle, RefreshCw } from "lucide-react";
 import type { TutoringSession } from "@/types/session";
+import { saveSessionsToStorage } from "@/lib/storage/session-storage";
 import { SessionCard } from "./session-card";
 import { RescheduleDialog } from "./reschedule-dialog";
 
 async function fetchUpcomingSessions(): Promise<TutoringSession[]> {
-  const res = await fetch("/api/sessions");
+  // Cache-busting parameter and headers to force fresh server data read
+  const res = await fetch(`/api/sessions?t=${Date.now()}`, {
+    cache: "no-store",
+    headers: {
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      Pragma: "no-cache",
+    },
+  });
+
   if (!res.ok) {
     throw new Error("Failed to fetch upcoming sessions.");
   }
-  return res.json();
+
+  const serverSessions = (await res.json()) as TutoringSession[];
+  
+  // Sync latest fetched sessions into localStorage
+  saveSessionsToStorage(serverSessions);
+
+  return serverSessions;
 }
 
 export function UpcomingSessions() {
@@ -22,6 +37,7 @@ export function UpcomingSessions() {
   const {
     data: sessions,
     isLoading,
+    isFetching,
     isError,
     error,
     refetch,
@@ -33,6 +49,10 @@ export function UpcomingSessions() {
   const handleOpenReschedule = (session: TutoringSession) => {
     setSelectedSession(session);
     setIsModalOpen(true);
+  };
+
+  const handleRefresh = async () => {
+    await refetch();
   };
 
   return (
@@ -49,11 +69,13 @@ export function UpcomingSessions() {
         </div>
 
         <button
-          onClick={() => refetch()}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white text-xs font-medium text-slate-700 border border-slate-200 hover:bg-slate-50 transition-colors shadow-xs self-start sm:self-auto"
+          type="button"
+          onClick={handleRefresh}
+          disabled={isFetching}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white text-xs font-medium text-slate-700 border border-slate-200 hover:bg-orange-50 hover:text-orange-900 hover:border-orange-300 disabled:opacity-50 transition-all shadow-xs self-start sm:self-auto cursor-pointer"
         >
-          <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`} />
-          Refresh Data
+          <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin text-orange-600" : ""}`} />
+          <span>{isFetching ? "Refreshing..." : "Refresh Data"}</span>
         </button>
       </div>
 
@@ -88,8 +110,9 @@ export function UpcomingSessions() {
             {error?.message || "An error occurred while fetching sessions."}
           </p>
           <button
-            onClick={() => refetch()}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md bg-rose-600 text-white text-xs font-medium hover:bg-rose-700 transition-colors shadow-xs"
+            type="button"
+            onClick={handleRefresh}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md bg-rose-600 text-white text-xs font-medium hover:bg-rose-700 transition-colors shadow-xs cursor-pointer"
           >
             <RefreshCw className="h-3.5 w-3.5" /> Try Again
           </button>

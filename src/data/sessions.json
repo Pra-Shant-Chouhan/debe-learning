@@ -5,8 +5,8 @@
     "subject": "Mathematics",
     "teacherId": "teacher-101",
     "teacherName": "Sarah Johnson",
-    "datetimeUtc": "2026-08-14T13:00:00.000Z",
-    "status": "reschedule_requested"
+    "datetimeUtc": "2026-08-13T15:00:00.000Z",
+    "status": "scheduled"
   },
   {
     "id": "session-002",
@@ -14,8 +14,8 @@
     "subject": "Physics",
     "teacherId": "teacher-102",
     "teacherName": "Michael Brown",
-    "datetimeUtc": "2026-08-13T10:00:00.000Z",
-    "status": "reschedule_requested"
+    "datetimeUtc": "2026-08-14T10:00:00.000Z",
+    "status": "scheduled"
   },
   {
     "id": "session-003",
