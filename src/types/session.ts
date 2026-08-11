@@ -93,3 +93,15 @@ export interface PendingReschedule {
   newDatetimeUtc: string;
   reason: RescheduleReason;
 }
+
+export interface RescheduleHistoryItem {
+  id: string;
+  sessionId: string;
+  subject: string;
+  teacherName: string;
+  existingDatetimeUtc: string;
+  newDatetimeUtc: string;
+  reason: RescheduleReason;
+  submittedAtUtc: string;
+  status: "pending_approval" | "approved" | "rejected";
+}

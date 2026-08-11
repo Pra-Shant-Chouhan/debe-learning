@@ -1,7 +1,8 @@
-import type { TutoringSession, PendingReschedule } from "@/types/session";
+import type { TutoringSession, PendingReschedule, RescheduleHistoryItem } from "@/types/session";
 
 const SESSIONS_STORAGE_KEY = "debe_upcoming_sessions_v1";
 const PENDING_RESCHEDULE_KEY = "debe_pending_reschedule_v1";
+const RESCHEDULE_HISTORY_KEY = "debe_reschedule_history_v1";
 
 /**
  * Saves sessions array to browser localStorage.
@@ -64,4 +65,37 @@ export function loadPendingRescheduleFromStorage(): PendingReschedule | null {
 export function clearPendingRescheduleFromStorage(): void {
   if (typeof window === "undefined") return;
   localStorage.removeItem(PENDING_RESCHEDULE_KEY);
+}
+
+/**
+ * Saves a submitted reschedule request into local history storage.
+ */
+export function addRescheduleHistoryItem(item: Omit<RescheduleHistoryItem, "id">): void {
+  if (typeof window === "undefined") return;
+  try {
+    const existing = loadRescheduleHistoryFromStorage();
+    const newItem: RescheduleHistoryItem = {
+      ...item,
+      id: `req-${Date.now()}`,
+    };
+    const updated = [newItem, ...existing];
+    localStorage.setItem(RESCHEDULE_HISTORY_KEY, JSON.stringify(updated));
+  } catch (error) {
+    console.error("Failed to add reschedule item to history:", error);
+  }
+}
+
+/**
+ * Loads list of all submitted reschedule requests from localStorage.
+ */
+export function loadRescheduleHistoryFromStorage(): RescheduleHistoryItem[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const data = localStorage.getItem(RESCHEDULE_HISTORY_KEY);
+    if (!data) return [];
+    return JSON.parse(data) as RescheduleHistoryItem[];
+  } catch (error) {
+    console.error("Failed to load reschedule history:", error);
+    return [];
+  }
 }

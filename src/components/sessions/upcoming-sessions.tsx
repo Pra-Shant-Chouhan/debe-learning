@@ -7,6 +7,7 @@ import type { TutoringSession } from "@/types/session";
 import { saveSessionsToStorage } from "@/lib/storage/session-storage";
 import { SessionCard } from "./session-card";
 import { RescheduleDialog } from "./reschedule-dialog";
+import { RescheduleHistory } from "./reschedule-history";
 
 async function fetchUpcomingSessions(): Promise<TutoringSession[]> {
   // Cache-busting parameter and headers to force fresh server data read
@@ -141,6 +142,9 @@ export function UpcomingSessions() {
           )}
         </>
       )}
+
+      {/* Local Reschedule Request History Section */}
+      <RescheduleHistory />
 
       {/* Reschedule Modal */}
       {selectedSession && (

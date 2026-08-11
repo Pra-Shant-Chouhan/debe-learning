@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Clock, Calendar as CalendarIcon, Globe, AlertCircle, CheckCircle2, ShieldAlert, Info } from "lucide-react";
+import { Clock, Calendar as CalendarIcon, Globe, AlertCircle, CheckCircle2, ShieldAlert, Info, HelpCircle } from "lucide-react";
 import type { TutoringSession, TeacherAvailability, RescheduleReason, TeacherSlot } from "@/types/session";
-import { getSlotState, getDisabledReasonMessage } from "@/lib/slots/generate-slots";
+import { getSlotState, MIN_LEAD_TIME_MS } from "@/lib/slots/generate-slots";
 import { formatParentLocalTime, formatLocalTime, formatUtcTime, getUserTimezone, toLocalDateKey } from "@/lib/time/timezone";
 import { useRescheduleSession } from "@/hooks/use-reschedule-session";
-import { savePendingRescheduleToStorage } from "@/lib/storage/session-storage";
+import { savePendingRescheduleToStorage, addRescheduleHistoryItem } from "@/lib/storage/session-storage";
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
@@ -35,6 +35,7 @@ export function RescheduleDialog({ session, open, onOpenChange }: RescheduleDial
   const [reason, setReason] = useState<RescheduleReason>("Conflict");
   const [selectedDateKey, setSelectedDateKey] = useState<string>("");
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [showLeadTimeInfo, setShowLeadTimeInfo] = useState<boolean>(false);
 
   // Fetch teacher slot availability
   const {
@@ -75,12 +76,13 @@ export function RescheduleDialog({ session, open, onOpenChange }: RescheduleDial
     }
   }, [groupedSlots, selectedDateKey]);
 
-  // Reset form when dialog opens/closes
+  // Reset form state when dialog opens/closes
   useEffect(() => {
     if (!open) {
       setSelectedSlotUtc("");
       setReason("Conflict");
       setSubmitError(null);
+      setShowLeadTimeInfo(false);
     }
   }, [open]);
 
@@ -91,7 +93,7 @@ export function RescheduleDialog({ session, open, onOpenChange }: RescheduleDial
     setSelectedSlotUtc(slot.startsAtUtc);
     setSubmitError(null);
 
-    // Save transient pending state to localStorage
+    // Save pending selection locally
     savePendingRescheduleToStorage({
       sessionId: session.id,
       newDatetimeUtc: slot.startsAtUtc,
@@ -116,16 +118,28 @@ export function RescheduleDialog({ session, open, onOpenChange }: RescheduleDial
         reason,
       });
 
-      // Close modal on clean success
+      // Save submitted request to local history in localStorage
+      addRescheduleHistoryItem({
+        sessionId: session.id,
+        subject: session.subject,
+        teacherName: session.teacherName,
+        existingDatetimeUtc: session.datetimeUtc,
+        newDatetimeUtc: selectedSlotUtc,
+        reason,
+        submittedAtUtc: new Date().toISOString(),
+        status: "pending_approval",
+      });
+
+      // Close modal on success
       onOpenChange(false);
     } catch (err) {
-      // Safe error handling without unhandled promise rejections
       const errorMessage = err instanceof Error ? err.message : "Failed to reschedule session.";
       setSubmitError(errorMessage);
     }
   };
 
   const availableDates = Object.keys(groupedSlots);
+  const cutoffTimeLocal = formatParentLocalTime(new Date(Date.now() + MIN_LEAD_TIME_MS).toISOString());
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -134,9 +148,9 @@ export function RescheduleDialog({ session, open, onOpenChange }: RescheduleDial
           <Badge variant="default">{session.subject}</Badge>
           <span className="text-xs text-slate-500">Tutor: {session.teacherName}</span>
         </div>
-        <DialogTitle className="mt-1">Request Reschedule</DialogTitle>
+        <DialogTitle className="mt-1">Request Session Reschedule</DialogTitle>
         <DialogDescription>
-          Select a new slot for your student. All available slots enforce Debe&apos;s 2-hour minimum lead-time policy.
+          Select a new date & time slot. All requests are saved locally and synced with Debe&apos;s portal.
         </DialogDescription>
       </DialogHeader>
 
@@ -152,14 +166,38 @@ export function RescheduleDialog({ session, open, onOpenChange }: RescheduleDial
           </div>
         )}
 
-        {/* Current Session Time Summary */}
-        <div className="rounded-lg border border-amber-200/80 bg-amber-50/50 p-3 text-xs space-y-1">
-          <p className="font-semibold text-amber-900 flex items-center gap-1.5">
-            <Clock className="h-3.5 w-3.5 text-amber-700" /> Current Session Schedule:
+        {/* 2-Hour Policy Explanation Banner */}
+        <div className="rounded-lg border border-orange-200/90 bg-orange-50/60 p-3 text-xs space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="font-bold text-orange-950 flex items-center gap-1.5">
+              <ShieldAlert className="h-4 w-4 text-orange-600" /> 
+              Debe 2-Hour Tutoring Lead-Time Policy
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowLeadTimeInfo(!showLeadTimeInfo)}
+              className="text-[11px] font-semibold text-orange-700 hover:text-orange-900 underline flex items-center gap-1 cursor-pointer"
+            >
+              <HelpCircle className="h-3 w-3" />
+              {showLeadTimeInfo ? "Hide explanation" : "Why are some slots disabled?"}
+            </button>
+          </div>
+
+          <p className="text-orange-900/90 text-[11px] leading-relaxed">
+            Tutoring sessions require at least <strong>2 hours advance notice</strong> before starting. 
+            Slots starting before <strong>{cutoffTimeLocal}</strong> are automatically disabled.
           </p>
-          <p className="text-amber-800 font-medium pl-5">
-            {formatParentLocalTime(session.datetimeUtc)} ({userTimezone})
-          </p>
+
+          {showLeadTimeInfo && (
+            <div className="mt-2 border-t border-orange-200 pt-2 text-[11px] text-orange-900 space-y-1 animate-in fade-in">
+              <p className="font-semibold">Why Some Slots Show Disabled:</p>
+              <ul className="list-disc pl-4 space-y-0.5 text-slate-700">
+                <li><strong className="text-orange-900">&lt; 2h lead</strong>: Slot starts within 2 hours of right now (or in the past).</li>
+                <li><strong className="text-orange-900">Current</strong>: Slot is identical to your current booked session time.</li>
+                <li><strong className="text-orange-900">Unavailable</strong>: Tutor is already booked or offline during that hour.</li>
+              </ul>
+            </div>
+          )}
         </div>
 
         {/* Step 1: Select Date */}
@@ -190,7 +228,7 @@ export function RescheduleDialog({ session, open, onOpenChange }: RescheduleDial
                     key={dateKey}
                     type="button"
                     onClick={() => setSelectedDateKey(dateKey)}
-                    className={`px-3 py-2 rounded-lg text-xs font-semibold shrink-0 border transition-all ${
+                    className={`px-3 py-2 rounded-lg text-xs font-semibold shrink-0 border transition-all cursor-pointer ${
                       isSelected
                         ? "bg-orange-600 text-white border-orange-600 shadow-xs"
                         : "bg-white text-slate-700 border-slate-200 hover:bg-orange-50 hover:border-orange-200"
@@ -210,9 +248,8 @@ export function RescheduleDialog({ session, open, onOpenChange }: RescheduleDial
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
               2. Select Available Slot
             </label>
-            <span className="text-[11px] text-slate-500 flex items-center gap-1">
-              <ShieldAlert className="h-3 w-3 text-orange-600" />
-              2-hour lead time enforced
+            <span className="text-[11px] text-slate-500 font-medium">
+              Displayed in {userTimezone}
             </span>
           </div>
 
@@ -223,40 +260,34 @@ export function RescheduleDialog({ session, open, onOpenChange }: RescheduleDial
                 const isSelected = selectedSlotUtc === slot.startsAtUtc;
 
                 return (
-                  <div key={slot.id} className="relative group">
-                    <button
-                      type="button"
-                      disabled={slotState.disabled}
-                      onClick={() => handleSlotSelect(slot)}
-                      className={`w-full px-3 py-2 rounded-lg text-xs font-semibold border transition-all text-center ${
-                        isSelected
-                          ? "bg-orange-600 text-white border-orange-600 shadow-xs ring-2 ring-orange-500/30"
-                          : slotState.disabled
-                          ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60"
-                          : "bg-white text-slate-800 border-slate-200 hover:bg-orange-50 hover:border-orange-300"
-                      }`}
-                    >
-                      {formatLocalTime(slot.startsAtUtc)}
-                      {slotState.disabled && (
-                        <span className="block text-[9px] font-normal text-slate-500 mt-0.5">
-                          {slotState.disabledReason === "too_soon"
-                            ? "< 2h lead"
-                            : slotState.disabledReason === "same_slot"
-                            ? "Current"
-                            : "Unavailable"}
-                        </span>
-                      )}
-                    </button>
-                  </div>
+                  <button
+                    key={slot.id}
+                    type="button"
+                    disabled={slotState.disabled}
+                    onClick={() => handleSlotSelect(slot)}
+                    className={`px-3 py-2 rounded-lg text-xs font-semibold border transition-all text-center cursor-pointer ${
+                      isSelected
+                        ? "bg-orange-600 text-white border-orange-600 shadow-xs ring-2 ring-orange-500/30"
+                        : slotState.disabled
+                        ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60"
+                        : "bg-white text-slate-800 border-slate-200 hover:bg-orange-50 hover:border-orange-300"
+                    }`}
+                  >
+                    {formatLocalTime(slot.startsAtUtc)}
+                    {slotState.disabled && (
+                      <span className="block text-[9px] font-normal text-slate-500 mt-0.5">
+                        {slotState.disabledReason === "too_soon"
+                          ? "< 2h lead"
+                          : slotState.disabledReason === "same_slot"
+                          ? "Current"
+                          : "Unavailable"}
+                      </span>
+                    )}
+                  </button>
                 );
               })}
             </div>
           )}
-
-          <p className="text-[11px] text-slate-500 flex items-center gap-1 mt-1">
-            <Info className="h-3 w-3 text-slate-400 shrink-0" />
-            <span>Slots within 2 hours of current time are disabled per Debe lead-time policy.</span>
-          </p>
         </div>
 
         {/* Step 3: Reschedule Reason */}
@@ -276,9 +307,9 @@ export function RescheduleDialog({ session, open, onOpenChange }: RescheduleDial
           </Select>
         </div>
 
-        {/* Explicit Timezone Reason Banner (Requirement Highlight) */}
+        {/* Explicit Timezone Reason Banner */}
         {selectedSlotUtc && (
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50/80 p-3.5 space-y-2 text-xs text-emerald-950 animate-in fade-in">
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50/90 p-3.5 space-y-2 text-xs text-emerald-950 animate-in fade-in">
             <div className="flex items-center gap-1.5 font-bold text-emerald-900">
               <CheckCircle2 className="h-4 w-4 text-emerald-600" />
               Timezone Conversion & Persisted UTC Confirmation
@@ -291,7 +322,7 @@ export function RescheduleDialog({ session, open, onOpenChange }: RescheduleDial
               <p className="flex items-center gap-1 text-[11px]">
                 <Globe className="h-3 w-3 text-emerald-700 shrink-0" />
                 <span className="font-semibold">Stored on server as UTC:</span>{" "}
-                <code className="bg-white/80 px-1.5 py-0.5 rounded border border-emerald-300 font-mono text-emerald-950">
+                <code className="bg-white px-1.5 py-0.5 rounded border border-emerald-300 font-mono text-emerald-950">
                   {selectedSlotUtc}
                 </code>
               </p>
@@ -314,7 +345,7 @@ export function RescheduleDialog({ session, open, onOpenChange }: RescheduleDial
             isLoading={mutation.isPending}
             disabled={!selectedSlotUtc || mutation.isPending}
           >
-            {mutation.isPending ? "Submitting Request..." : "Confirm Reschedule"}
+            {mutation.isPending ? "Submitting Request..." : "Confirm & Save Reschedule"}
           </Button>
         </DialogFooter>
       </form>
