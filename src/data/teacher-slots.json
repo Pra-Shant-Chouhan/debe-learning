@@ -1,0 +1,107 @@
+[
+  {
+    "teacherId": "teacher-101",
+    "teacherName": "Sarah Johnson",
+    "timezone": "America/New_York",
+    "slots": [
+      {
+        "id": "slot-100",
+        "teacherId": "teacher-101",
+        "startsAtUtc": "2026-08-11T07:30:00.000Z",
+        "durationMinutes": 60,
+        "isAvailable": true
+      },
+      {
+        "id": "slot-101",
+        "teacherId": "teacher-101",
+        "startsAtUtc": "2026-08-13T13:00:00.000Z",
+        "durationMinutes": 60,
+        "isAvailable": true
+      },
+      {
+        "id": "slot-102",
+        "teacherId": "teacher-101",
+        "startsAtUtc": "2026-08-13T15:00:00.000Z",
+        "durationMinutes": 60,
+        "isAvailable": true
+      },
+      {
+        "id": "slot-103",
+        "teacherId": "teacher-101",
+        "startsAtUtc": "2026-08-13T17:00:00.000Z",
+        "durationMinutes": 60,
+        "isAvailable": false
+      },
+      {
+        "id": "slot-104",
+        "teacherId": "teacher-101",
+        "startsAtUtc": "2026-08-14T13:00:00.000Z",
+        "durationMinutes": 60,
+        "isAvailable": true
+      },
+      {
+        "id": "slot-105",
+        "teacherId": "teacher-101",
+        "startsAtUtc": "2026-08-15T15:00:00.000Z",
+        "durationMinutes": 60,
+        "isAvailable": true
+      },
+      {
+        "id": "slot-106",
+        "teacherId": "teacher-101",
+        "startsAtUtc": "2026-08-16T14:00:00.000Z",
+        "durationMinutes": 60,
+        "isAvailable": true
+      }
+    ]
+  },
+  {
+    "teacherId": "teacher-102",
+    "teacherName": "Michael Brown",
+    "timezone": "Europe/London",
+    "slots": [
+      {
+        "id": "slot-200",
+        "teacherId": "teacher-102",
+        "startsAtUtc": "2026-08-11T08:00:00.000Z",
+        "durationMinutes": 60,
+        "isAvailable": true
+      },
+      {
+        "id": "slot-201",
+        "teacherId": "teacher-102",
+        "startsAtUtc": "2026-08-13T10:00:00.000Z",
+        "durationMinutes": 60,
+        "isAvailable": true
+      },
+      {
+        "id": "slot-202",
+        "teacherId": "teacher-102",
+        "startsAtUtc": "2026-08-14T10:00:00.000Z",
+        "durationMinutes": 60,
+        "isAvailable": true
+      },
+      {
+        "id": "slot-203",
+        "teacherId": "teacher-102",
+        "startsAtUtc": "2026-08-14T14:00:00.000Z",
+        "durationMinutes": 60,
+        "isAvailable": true
+      },
+      {
+        "id": "slot-204",
+        "teacherId": "teacher-102",
+        "startsAtUtc": "2026-08-15T10:00:00.000Z",
+        "durationMinutes": 60,
+        "isAvailable": true
+      },
+      {
+        "id": "slot-205",
+        "teacherId": "teacher-102",
+        "startsAtUtc": "2026-08-16T11:00:00.000Z",
+        "durationMinutes": 60,
+        "isAvailable": true
+      }
+    ]
+  }
+]

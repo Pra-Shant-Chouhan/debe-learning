@@ -1,0 +1,29 @@
+[
+  {
+    "id": "session-001",
+    "studentId": "student-001",
+    "subject": "Mathematics",
+    "teacherId": "teacher-101",
+    "teacherName": "Sarah Johnson",
+    "datetimeUtc": "2026-08-13T13:00:00.000Z",
+    "status": "scheduled"
+  },
+  {
+    "id": "session-002",
+    "studentId": "student-001",
+    "subject": "Physics",
+    "teacherId": "teacher-102",
+    "teacherName": "Michael Brown",
+    "datetimeUtc": "2026-08-14T10:00:00.000Z",
+    "status": "scheduled"
+  },
+  {
+    "id": "session-003",
+    "studentId": "student-001",
+    "subject": "Chemistry",
+    "teacherId": "teacher-101",
+    "teacherName": "Sarah Johnson",
+    "datetimeUtc": "2026-08-15T13:00:00.000Z",
+    "status": "scheduled"
+  }
+]
